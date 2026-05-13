@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>View Jobs</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 50px auto; padding: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #4CAF50; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .nav { margin-bottom: 20px; }
+        .nav a { margin-right: 15px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="/create">Create Job</a>
+        <a href="/jobs">View Jobs</a>
+        <a href="/health">Health</a>
+    </div>
+
+    <h1>Jobs</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>UUID</th>
+                <th>Creator</th>
+                <th>Process Time (s)</th>
+                <th>Status</th>
+                <th>Created At</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in jobs %}
+            <tr>
+                <td>{{ job['id'] }}</td>
+                <td>{{ job['creator'] }}</td>
+                <td>{{ job['process_time'] }}</td>
+                <td>{{ job['status'] }}</td>
+                <td>{{ job['created_at'] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

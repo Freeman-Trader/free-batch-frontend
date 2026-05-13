@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Health</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        .status { background-color: #4CAF50; color: white; padding: 20px; text-align: center; border-radius: 5px; }
+        .machine-id { font-size: 24px; font-weight: bold; margin: 20px 0; }
+        .nav { margin-bottom: 20px; }
+        .nav a { margin-right: 15px; }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="/create">Create Job</a>
+        <a href="/jobs">View Jobs</a>
+        <a href="/health">Health</a>
+    </div>
+
+    <h1>Health Status</h1>
+    <div class="status">
+        <p>Server Status: OK</p>
+        <div class="machine-id">Machine ID: {{ machine_id }}</div>
+    </div>
+</body>
+</html>
