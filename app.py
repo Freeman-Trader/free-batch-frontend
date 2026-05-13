@@ -1,3 +1,4 @@
+import logging
 from flask import Flask, render_template, request, redirect, url_for
 from dotenv import load_dotenv
 import uuid
@@ -9,6 +10,18 @@ import os
 load_dotenv()
 
 app = Flask(__name__)
+
+os.mkdir('logs')
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.FileHandler(os.path.join('logs', 'frontend.log')),
+        logging.StreamHandler()
+    ]
+)
+
 app.config['DATABASE'] = os.getenv('DB_PATH', 'jobs.db')
 app.config['RABBITMQ_HOST'] = os.getenv('RABBITMQ_HOST', 'localhost')
 app.config['RABBITMQ_QUEUE'] = os.getenv('RABBITMQ_QUEUE', 'job_queue')
@@ -16,6 +29,11 @@ app.config['DB_PASSWORD'] = os.getenv('DB_PASSWORD', '')
 app.config['FLASK_HOST'] = os.getenv('FLASK_HOST', '0.0.0.0')
 app.config['FLASK_PORT'] = int(os.getenv('FLASK_PORT', 5000))
 app.config['FLASK_DEBUG'] = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
+
+try:
+    HOST_ID = socket.gethostname() + '_' + socket.gethostbyname(socket.gethostname())
+except socket.gaierror:
+    HOST_ID = socket.gethostname() + '_unknown-ip'
 
 def get_db_connection():
     import sqlite3
@@ -48,9 +66,6 @@ def publish_to_rabbitmq(job_data):
         properties=pika.BasicProperties(delivery_mode=2)
     )
     connection.close()
-
-def get_machine_id():
-    return socket.gethostname() + '_' + socket.gethostbyname(socket.gethostname())
 
 @app.route('/')
 def index():
@@ -96,8 +111,7 @@ def view_jobs():
 
 @app.route('/health')
 def health():
-    machine_id = get_machine_id()
-    return render_template('health.html', machine_id=machine_id)
+    return render_template('health.html', machine_id=HOST_ID)
 
 if __name__ == '__main__':
     init_db()
