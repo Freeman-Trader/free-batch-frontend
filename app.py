@@ -1,14 +1,21 @@
 from flask import Flask, render_template, request, redirect, url_for
+from dotenv import load_dotenv
 import uuid
 import pika
 import json
 import socket
-from datetime import datetime
+import os
+
+load_dotenv()
 
 app = Flask(__name__)
-app.config['DATABASE'] = 'jobs.db'
-app.config['RABBITMQ_HOST'] = 'localhost'
-app.config['RABBITMQ_QUEUE'] = 'job_queue'
+app.config['DATABASE'] = os.getenv('DB_PATH', 'jobs.db')
+app.config['RABBITMQ_HOST'] = os.getenv('RABBITMQ_HOST', 'localhost')
+app.config['RABBITMQ_QUEUE'] = os.getenv('RABBITMQ_QUEUE', 'job_queue')
+app.config['DB_PASSWORD'] = os.getenv('DB_PASSWORD', '')
+app.config['FLASK_HOST'] = os.getenv('FLASK_HOST', '0.0.0.0')
+app.config['FLASK_PORT'] = int(os.getenv('FLASK_PORT', 5000))
+app.config['FLASK_DEBUG'] = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
 
 def get_db_connection():
     import sqlite3
@@ -94,4 +101,8 @@ def health():
 
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(
+        debug=app.config['FLASK_DEBUG'],
+        host=app.config['FLASK_HOST'],
+        port=app.config['FLASK_PORT']
+    )
