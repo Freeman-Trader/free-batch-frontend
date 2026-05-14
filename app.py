@@ -6,12 +6,13 @@ import pika
 import json
 import socket
 import os
+import mysql.connector
 
 load_dotenv()
 
 app = Flask(__name__)
 
-os.mkdir('logs')
+os.makedirs('logs', exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -22,10 +23,13 @@ logging.basicConfig(
     ]
 )
 
-app.config['DATABASE'] = os.getenv('DB_PATH', 'jobs.db')
+app.config['DB_HOST'] = os.getenv('DB_HOST', 'localhost')
+app.config['DB_PORT'] = int(os.getenv('DB_PORT', 3306))
+app.config['DB_USER'] = os.getenv('DB_USER', 'root')
+app.config['DB_PASSWORD'] = os.getenv('DB_PASSWORD', '')
+app.config['DB_NAME'] = os.getenv('DB_NAME', 'jobs')
 app.config['RABBITMQ_HOST'] = os.getenv('RABBITMQ_HOST', 'localhost')
 app.config['RABBITMQ_QUEUE'] = os.getenv('RABBITMQ_QUEUE', 'job_queue')
-app.config['DB_PASSWORD'] = os.getenv('DB_PASSWORD', '')
 app.config['FLASK_HOST'] = os.getenv('FLASK_HOST', '0.0.0.0')
 app.config['FLASK_PORT'] = int(os.getenv('FLASK_PORT', 5000))
 app.config['FLASK_DEBUG'] = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
@@ -36,23 +40,29 @@ except socket.gaierror:
     HOST_ID = socket.gethostname() + '_unknown-ip'
 
 def get_db_connection():
-    import sqlite3
-    conn = sqlite3.connect(app.config['DATABASE'])
-    conn.row_factory = sqlite3.Row
+    conn = mysql.connector.connect(
+        host=app.config['DB_HOST'],
+        port=app.config['DB_PORT'],
+        user=app.config['DB_USER'],
+        password=app.config['DB_PASSWORD'],
+        database=app.config['DB_NAME']
+    )
     return conn
 
 def init_db():
     conn = get_db_connection()
-    conn.execute('''
+    cursor = conn.cursor()
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS jobs (
-            id TEXT PRIMARY KEY,
-            creator TEXT NOT NULL,
-            process_time INTEGER NOT NULL,
-            status TEXT DEFAULT 'pending',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            id VARCHAR(36) PRIMARY KEY,
+            creator VARCHAR(255) NOT NULL,
+            process_time INT NOT NULL,
+            status VARCHAR(20) DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     conn.commit()
+    cursor.close()
     conn.close()
 
 def publish_to_rabbitmq(job_data):
@@ -85,11 +95,13 @@ def create_job():
         }
 
         conn = get_db_connection()
-        conn.execute(
-            'INSERT INTO jobs (id, creator, process_time, status) VALUES (?, ?, ?, ?)',
+        cursor = conn.cursor()
+        cursor.execute(
+            'INSERT INTO jobs (id, creator, process_time, status) VALUES (%s, %s, %s, %s)',
             (job_id, creator, process_time, 'pending')
         )
         conn.commit()
+        cursor.close()
         conn.close()
 
         try:
@@ -105,7 +117,10 @@ def create_job():
 @app.route('/jobs')
 def view_jobs():
     conn = get_db_connection()
-    jobs = conn.execute('SELECT * FROM jobs ORDER BY created_at DESC').fetchall()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute('SELECT * FROM jobs ORDER BY created_at DESC')
+    jobs = cursor.fetchall()
+    cursor.close()
     conn.close()
     return render_template('view_jobs.html', jobs=jobs)
 
